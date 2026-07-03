@@ -1,10 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { PresenceClient } from '@whogoes/client';
 import { useStore, type Note } from './store';
 import { useCanvas } from './useCanvas';
 import { screenToCanvas } from './utils';
 import { StickyNote } from './StickyNote';
 
 export default function Container() {
+  const { roomId } = useParams();
   const camera = useStore((state) => state.camera);
   const setCamera = useStore((state) => state.setCamera);
   const addStroke = useStore((state) => state.addStroke);
@@ -13,11 +16,35 @@ export default function Container() {
   const addNote = useStore((state) => state.addNote);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true);
   const isDragging = useRef(false);
   const isDrawing = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useCanvas();
+  const roomRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!roomId) return;
+    setIsConnecting(true);
+    
+    const client = new PresenceClient({
+      endpoint: 'ws://localhost:8080/ws',
+      token: () => 'token',
+    });
+    
+    const room = client.join(roomId);
+    roomRef.current = room;
+    
+    const handleSnapshot = () => setIsConnecting(false);
+    room.on('snapshot', handleSnapshot);
+    
+    return () => {
+      room.off('snapshot', handleSnapshot);
+      room.leave();
+      roomRef.current = null;
+    };
+  }, [roomId]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -95,6 +122,11 @@ export default function Container() {
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
+    const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
+    if (roomRef.current) {
+      roomRef.current.update({ cursor: point });
+    }
+
     if (isDragging.current && isSpacePressed) {
       const dx = e.clientX - lastPointer.current.x;
       const dy = e.clientY - lastPointer.current.y;
@@ -106,7 +138,6 @@ export default function Container() {
 
       lastPointer.current = { x: e.clientX, y: e.clientY };
     } else if (isDrawing.current) {
-      const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
       updateCurrentStroke(point);
     }
   };
@@ -194,6 +225,14 @@ export default function Container() {
       >
         Add Note
       </button>
+      <div style={{ position: 'absolute', bottom: 0, right: 0 }}>
+        {roomId}
+      </div>
+      {isConnecting && (
+        <div style={{ position: 'absolute', top: 0, right: 0 }}>
+          Connecting...
+        </div>
+      )}
     </div>
   );
 }
