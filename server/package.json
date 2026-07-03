@@ -9,6 +9,7 @@
   "dependencies": {
     "@hocuspocus/server": "^4.3.0",
     "@whogoes/server": "^1.0.1",
+    "ioredis-mock": "^8.13.1",
     "marple": "^1.0.0",
     "y-websocket": "^1.5.4",
     "yjs": "^13.6.31"
