@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from './store';
+import { useCanvas } from './useCanvas';
 
 export default function Container() {
   const camera = useStore((state) => state.camera);
@@ -9,6 +10,7 @@ export default function Container() {
   const isDragging = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useCanvas();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -115,32 +117,37 @@ export default function Container() {
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      <div
+      <canvas
+        ref={canvasRef}
         style={{
           position: 'absolute',
-          transform: `translate(${camera.x}px, ${camera.y}px) scale(${camera.z})`,
-          transformOrigin: '0 0',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      />
+      <svg
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
         }}
       >
-        <div 
-          style={{ 
-            width: 200, 
-            height: 200, 
-            background: '#667eea', 
-            borderRadius: 16,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            position: 'absolute', 
-            left: 300, 
-            top: 200 
-          }}
-        >
-          Element
-        </div>
-      </div>
+        <g transform={`translate(${camera.x}, ${camera.y}) scale(${camera.z})`}>
+          <circle 
+            cx={500} 
+            cy={500} 
+            r={50} 
+            fill="#ff0055" 
+            style={{ pointerEvents: 'auto', cursor: 'pointer' }} 
+          />
+        </g>
+      </svg>
     </div>
   );
 }
