@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { PresenceClient } from '@whogoes/client';
+import { PresenceClient, type SessionPayload } from '@whogoes/client';
 import { useStore, type Note } from './store';
 import { useCanvas } from './useCanvas';
 import { screenToCanvas } from './utils';
@@ -17,6 +17,7 @@ export default function Container() {
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [remoteSessions, setRemoteSessions] = useState<Record<string, SessionPayload>>({});
   const isDragging = useRef(false);
   const isDrawing = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
@@ -36,11 +37,41 @@ export default function Container() {
     const room = client.join(roomId);
     roomRef.current = room;
     
-    const handleSnapshot = () => setIsConnecting(false);
+    const handleSnapshot = (sessions: SessionPayload[]) => {
+      setIsConnecting(false);
+      const newSessions: Record<string, SessionPayload> = {};
+      sessions.forEach(s => {
+        newSessions[s.sessionId] = s;
+      });
+      setRemoteSessions(newSessions);
+    };
+
+    const handleUpdate = (session: SessionPayload) => {
+      setRemoteSessions(prev => ({ ...prev, [session.sessionId]: session }));
+    };
+
+    const handleJoin = (session: SessionPayload) => {
+      setRemoteSessions(prev => ({ ...prev, [session.sessionId]: session }));
+    };
+
+    const handleLeave = (sessionId: string) => {
+      setRemoteSessions(prev => {
+        const next = { ...prev };
+        delete next[sessionId];
+        return next;
+      });
+    };
+
     room.on('snapshot', handleSnapshot);
+    room.on('update', handleUpdate);
+    room.on('join', handleJoin);
+    room.on('leave', handleLeave);
     
     return () => {
       room.off('snapshot', handleSnapshot);
+      room.off('update', handleUpdate);
+      room.off('join', handleJoin);
+      room.off('leave', handleLeave);
       room.leave();
       roomRef.current = null;
     };
@@ -199,6 +230,20 @@ export default function Container() {
           {notes.map((note) => (
             <StickyNote key={note.id} note={note} />
           ))}
+          {Object.values(remoteSessions).map(session => {
+            if (!session.cursor) return null;
+            return (
+              <text
+                key={session.sessionId}
+                x={session.cursor.x}
+                y={session.cursor.y}
+                fill={session.user?.color || 'red'}
+                fontSize="40"
+              >
+                V
+              </text>
+            );
+          })}
           <circle 
             cx={500} 
             cy={500} 
