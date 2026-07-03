@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { PresenceClient, type SessionPayload } from '@whogoes/client';
-import { useStore, type Note } from './store';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
+import { useStore, type Note, type Stroke } from './store';
 import { useCanvas } from './useCanvas';
 import { screenToCanvas } from './utils';
 import { StickyNote } from './StickyNote';
@@ -10,10 +12,14 @@ export default function Container() {
   const { roomId } = useParams();
   const camera = useStore((state) => state.camera);
   const setCamera = useStore((state) => state.setCamera);
-  const addStroke = useStore((state) => state.addStroke);
+  const setStrokes = useStore((state) => state.setStrokes);
+  const setCurrentStroke = useStore((state) => state.setCurrentStroke);
   const updateCurrentStroke = useStore((state) => state.updateCurrentStroke);
   const notes = useStore((state) => state.notes);
-  const addNote = useStore((state) => state.addNote);
+  const setNotes = useStore((state) => state.setNotes);
+
+  const yNotes = useRef<Y.Map<Note> | null>(null);
+  const yStrokes = useRef<Y.Array<Stroke> | null>(null);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
@@ -76,6 +82,37 @@ export default function Container() {
       roomRef.current = null;
     };
   }, [roomId]);
+
+  useEffect(() => {
+    if (!roomId) return;
+    
+    const doc = new Y.Doc();
+    const provider = new WebsocketProvider('ws://localhost:1234', roomId, doc);
+    
+    yNotes.current = doc.getMap<Note>('notes');
+    yStrokes.current = doc.getArray<Stroke>('strokes');
+
+    const updateNotes = () => {
+      if (!yNotes.current) return;
+      setNotes(Array.from(yNotes.current.keys()).map(k => yNotes.current!.get(k)!));
+    };
+
+    const updateStrokes = () => {
+      if (!yStrokes.current) return;
+      setStrokes(yStrokes.current.toArray());
+    };
+
+    yNotes.current.observe(updateNotes);
+    yStrokes.current.observe(updateStrokes);
+
+    updateNotes();
+    updateStrokes();
+    
+    return () => {
+      provider.destroy();
+      doc.destroy();
+    };
+  }, [roomId, setNotes, setStrokes]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -148,7 +185,7 @@ export default function Container() {
     } else {
       isDrawing.current = true;
       const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
-      addStroke([point]);
+      setCurrentStroke([point]);
     }
   };
 
@@ -175,17 +212,34 @@ export default function Container() {
 
   const handlePointerUp = () => {
     isDragging.current = false;
-    isDrawing.current = false;
+    if (isDrawing.current) {
+      isDrawing.current = false;
+      const state = useStore.getState();
+      if (state.currentStroke && yStrokes.current) {
+        yStrokes.current.push([state.currentStroke]);
+      }
+      setCurrentStroke(null);
+    }
   };
 
   const handleAddNote = () => {
+    if (!yNotes.current) return;
+    const id = Date.now().toString();
     const newNote: Note = {
-      id: Date.now().toString(),
+      id,
       x: -camera.x / camera.z + window.innerWidth / 2 / camera.z - 100,
       y: -camera.y / camera.z + window.innerHeight / 2 / camera.z - 100,
       text: '',
     };
-    addNote(newNote);
+    yNotes.current.set(id, newNote);
+  };
+
+  const handleUpdateNote = (id: string, updates: Partial<Note>) => {
+    if (!yNotes.current) return;
+    const note = yNotes.current.get(id);
+    if (note) {
+      yNotes.current.set(id, { ...note, ...updates });
+    }
   };
 
   return (
@@ -228,7 +282,7 @@ export default function Container() {
       >
         <g transform={`translate(${camera.x}, ${camera.y}) scale(${camera.z})`}>
           {notes.map((note) => (
-            <StickyNote key={note.id} note={note} />
+            <StickyNote key={note.id} note={note} onUpdate={handleUpdateNote} />
           ))}
           {Object.values(remoteSessions).map(session => {
             if (!session.cursor) return null;

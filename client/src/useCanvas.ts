@@ -43,7 +43,8 @@ export function useCanvas() {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
 
-      for (const stroke of state.strokes) {
+      const allStrokes = state.currentStroke ? [...state.strokes, state.currentStroke] : state.strokes;
+      for (const stroke of allStrokes) {
         if (stroke.length === 0) continue;
         ctx.beginPath();
         ctx.moveTo(stroke[0].x, stroke[0].y);

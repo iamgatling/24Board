@@ -3,11 +3,15 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/index.ts"
+    "dev": "node --watch src/index.ts",
+    "yjs": "HOST=localhost PORT=1234 y-websocket-server"
   },
   "dependencies": {
+    "@hocuspocus/server": "^4.3.0",
     "@whogoes/server": "^1.0.1",
-    "marple": "^1.0.0"
+    "marple": "^1.0.0",
+    "y-websocket": "^1.5.4",
+    "yjs": "^13.6.31"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

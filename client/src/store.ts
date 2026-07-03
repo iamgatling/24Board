@@ -24,35 +24,30 @@ interface BoardState {
   camera: Camera;
   pointer: Point;
   strokes: Stroke[];
+  currentStroke: Stroke | null;
   notes: Note[];
   setCamera: (camera: Partial<Camera>) => void;
   setPointer: (pointer: Point) => void;
-  addStroke: (stroke: Stroke) => void;
+  setStrokes: (strokes: Stroke[]) => void;
+  setCurrentStroke: (stroke: Stroke | null) => void;
   updateCurrentStroke: (point: Point) => void;
-  addNote: (note: Note) => void;
-  updateNote: (id: string, updates: Partial<Note>) => void;
+  setNotes: (notes: Note[]) => void;
 }
 
 export const useStore = create<BoardState>((set) => ({
   camera: { x: 0, y: 0, z: 1 },
   pointer: { x: 0, y: 0 },
   strokes: [],
+  currentStroke: null,
   notes: [],
   setCamera: (cameraUpdate) =>
     set((state) => ({ camera: { ...state.camera, ...cameraUpdate } })),
   setPointer: (pointer) => set({ pointer }),
-  addStroke: (stroke) => set((state) => ({ strokes: [...state.strokes, stroke] })),
+  setStrokes: (strokes) => set({ strokes }),
+  setCurrentStroke: (currentStroke) => set({ currentStroke }),
   updateCurrentStroke: (point) =>
-    set((state) => {
-      const strokes = [...state.strokes];
-      if (strokes.length > 0) {
-        strokes[strokes.length - 1] = [...strokes[strokes.length - 1], point];
-      }
-      return { strokes };
-    }),
-  addNote: (note) => set((state) => ({ notes: [...state.notes, note] })),
-  updateNote: (id, updates) =>
     set((state) => ({
-      notes: state.notes.map((n) => (n.id === id ? { ...n, ...updates } : n)),
+      currentStroke: state.currentStroke ? [...state.currentStroke, point] : [point],
     })),
+  setNotes: (notes) => set({ notes }),
 }));

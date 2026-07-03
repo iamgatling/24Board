@@ -2,8 +2,7 @@ import React, { useRef } from 'react';
 import { useStore, type Note } from './store';
 import { screenToCanvas } from './utils';
 
-export function StickyNote({ note }: { note: Note }) {
-  const updateNote = useStore((state) => state.updateNote);
+export function StickyNote({ note, onUpdate }: { note: Note; onUpdate: (id: string, updates: Partial<Note>) => void }) {
   const camera = useStore((state) => state.camera);
   const isDragging = useRef(false);
   const offset = useRef({ x: 0, y: 0 });
@@ -25,7 +24,7 @@ export function StickyNote({ note }: { note: Note }) {
     if (!isDragging.current) return;
     
     const point = screenToCanvas(e.clientX, e.clientY, camera);
-    updateNote(note.id, {
+    onUpdate(note.id, {
       x: point.x - offset.current.x,
       y: point.y - offset.current.y,
     });
@@ -51,7 +50,7 @@ export function StickyNote({ note }: { note: Note }) {
       <foreignObject x={10} y={10} width={180} height={180} style={{ pointerEvents: 'none' }}>
         <textarea
           value={note.text}
-          onChange={(e) => updateNote(note.id, { text: e.target.value })}
+          onChange={(e) => onUpdate(note.id, { text: e.target.value })}
           onPointerDown={(e) => e.stopPropagation()}
           style={{
             width: '100%',
