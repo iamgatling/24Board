@@ -8,6 +8,14 @@
   </head>
   <body>
     <div id="root"></div>
+    <script src="http://localhost:3000/marple/client.js"></script>
+    <script>
+      window.addEventListener('load', () => {
+        if (window.Marple) {
+          window.Marple.init({ endpoint: 'http://localhost:3000/marple/collect' });
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

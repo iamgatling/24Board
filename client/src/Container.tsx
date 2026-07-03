@@ -87,7 +87,7 @@ export default function Container() {
     if (!roomId) return;
     
     const doc = new Y.Doc();
-    const provider = new WebsocketProvider('ws://localhost:1234', roomId, doc);
+    const provider = new WebsocketProvider('ws://localhost:3000', roomId, doc);
     
     yNotes.current = doc.getMap<Note>('notes');
     yStrokes.current = doc.getArray<Stroke>('strokes');
@@ -217,6 +217,10 @@ export default function Container() {
       const state = useStore.getState();
       if (state.currentStroke && yStrokes.current) {
         yStrokes.current.push([state.currentStroke]);
+        
+        if ((window as any).Marple) {
+          (window as any).Marple.track('stroke_drawn', { roomId, points: state.currentStroke.length });
+        }
       }
       setCurrentStroke(null);
     }
@@ -232,6 +236,10 @@ export default function Container() {
       text: '',
     };
     yNotes.current.set(id, newNote);
+    
+    if ((window as any).Marple) {
+      (window as any).Marple.track('note_created', { roomId });
+    }
   };
 
   const handleUpdateNote = (id: string, updates: Partial<Note>) => {
