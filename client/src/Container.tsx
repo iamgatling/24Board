@@ -1,13 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useStore } from './store';
+import { useStore, type Note } from './store';
 import { useCanvas } from './useCanvas';
+import { screenToCanvas } from './utils';
+import { StickyNote } from './StickyNote';
 
 export default function Container() {
   const camera = useStore((state) => state.camera);
   const setCamera = useStore((state) => state.setCamera);
+  const addStroke = useStore((state) => state.addStroke);
+  const updateCurrentStroke = useStore((state) => state.updateCurrentStroke);
+  const notes = useStore((state) => state.notes);
+  const addNote = useStore((state) => state.addNote);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const isDragging = useRef(false);
+  const isDrawing = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useCanvas();
@@ -80,6 +87,10 @@ export default function Container() {
     if (isSpacePressed) {
       isDragging.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
+    } else {
+      isDrawing.current = true;
+      const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
+      addStroke([point]);
     }
   };
 
@@ -94,11 +105,25 @@ export default function Container() {
       });
 
       lastPointer.current = { x: e.clientX, y: e.clientY };
+    } else if (isDrawing.current) {
+      const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
+      updateCurrentStroke(point);
     }
   };
 
   const handlePointerUp = () => {
     isDragging.current = false;
+    isDrawing.current = false;
+  };
+
+  const handleAddNote = () => {
+    const newNote: Note = {
+      id: Date.now().toString(),
+      x: -camera.x / camera.z + window.innerWidth / 2 / camera.z - 100,
+      y: -camera.y / camera.z + window.innerHeight / 2 / camera.z - 100,
+      text: '',
+    };
+    addNote(newNote);
   };
 
   return (
@@ -111,6 +136,7 @@ export default function Container() {
         overflow: 'hidden',
         cursor: isSpacePressed ? (isDragging.current ? 'grabbing' : 'grab') : 'default',
         backgroundColor: '#f5f5f5',
+        touchAction: 'none',
       }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -139,6 +165,9 @@ export default function Container() {
         }}
       >
         <g transform={`translate(${camera.x}, ${camera.y}) scale(${camera.z})`}>
+          {notes.map((note) => (
+            <StickyNote key={note.id} note={note} />
+          ))}
           <circle 
             cx={500} 
             cy={500} 
@@ -148,6 +177,23 @@ export default function Container() {
           />
         </g>
       </svg>
+      <button
+        onClick={handleAddNote}
+        style={{
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          zIndex: 10,
+          padding: '8px 16px',
+          background: '#1f2937',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: 'pointer',
+        }}
+      >
+        Add Note
+      </button>
     </div>
   );
 }

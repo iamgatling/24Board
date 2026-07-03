@@ -38,6 +38,21 @@ export function useCanvas() {
 
       ctx.setTransform(camera.z * dpr, 0, 0, camera.z * dpr, camera.x * dpr, camera.y * dpr);
 
+      ctx.strokeStyle = '#6b6375';
+      ctx.lineWidth = 4;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      for (const stroke of state.strokes) {
+        if (stroke.length === 0) continue;
+        ctx.beginPath();
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for (let i = 1; i < stroke.length; i++) {
+          ctx.lineTo(stroke[i].x, stroke[i].y);
+        }
+        ctx.stroke();
+      }
+
       ctx.fillStyle = '#667eea';
       ctx.beginPath();
       ctx.roundRect(300, 200, 200, 200, 16);
