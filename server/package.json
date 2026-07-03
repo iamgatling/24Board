@@ -6,7 +6,8 @@
     "dev": "node --watch src/index.ts"
   },
   "dependencies": {
-    "@whogoes/server": "^1.0.1"
+    "@whogoes/server": "^1.0.1",
+    "marple": "^1.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",
