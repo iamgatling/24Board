@@ -22,9 +22,38 @@ body {
   background: var(--bg);
 }
 
+button:focus {
+  outline: none;
+}
+
 #root {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
   display: flex;
+}
+
+.chrome-btn {
+  transition: all 0.2s ease;
+}
+
+.chrome-btn:hover {
+  background: rgba(0, 0, 0, 0.05) !important;
+}
+
+.chrome-btn:active {
+  transform: scale(0.95);
+}
+
+.toolbar-btn {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.toolbar-btn:hover {
+  background: #f3f4f6 !important;
+  color: #111827 !important;
+}
+
+.toolbar-btn:active {
+  transform: scale(0.92);
 }

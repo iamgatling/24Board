@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Container from './Container';
+import Container from './components/Container';
 
 function App() {
   return (

@@ -7,6 +7,7 @@
     "yjs": "HOST=localhost PORT=1234 y-websocket-server"
   },
   "dependencies": {
+    "@hocuspocus/extension-database": "^4.3.0",
     "@hocuspocus/server": "^4.3.0",
     "@whogoes/server": "^1.0.1",
     "cors": "^2.8.6",
@@ -24,6 +25,7 @@
     "@types/express": "^5.0.6",
     "@types/express-ws": "^3.0.6",
     "@types/node": "^24.13.2",
+    "@types/pg": "^8.20.0",
     "typescript": "~6.0.2"
   }
 }

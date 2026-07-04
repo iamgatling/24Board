@@ -3,10 +3,12 @@ import { useParams } from 'react-router-dom';
 import { PresenceClient, type SessionPayload } from '@whogoes/client';
 import * as Y from 'yjs';
 import { WebsocketProvider } from 'y-websocket';
-import { useStore, type Note, type Stroke } from './store';
-import { useCanvas } from './useCanvas';
-import { screenToCanvas } from './utils';
+import { useStore, type Note, type Stroke } from '../store/store';
+import { useCanvas } from '../hooks/useCanvas';
+import { screenToCanvas } from '../utils/utils';
 import { StickyNote } from './StickyNote';
+import { Toolbar } from './Toolbar';
+import { Chrome } from './Chrome';
 
 export default function Container() {
   const { roomId } = useParams();
@@ -20,11 +22,13 @@ export default function Container() {
 
   const yNotes = useRef<Y.Map<Note> | null>(null);
   const yStrokes = useRef<Y.Array<Stroke> | null>(null);
+  const undoManagerRef = useRef<Y.UndoManager | null>(null);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
   const [isConnecting, setIsConnecting] = useState(true);
   const [remoteSessions, setRemoteSessions] = useState<Record<string, SessionPayload>>({});
   const isDragging = useRef(false);
+  const isPanning = useRef(false);
   const isDrawing = useRef(false);
   const lastPointer = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
@@ -91,6 +95,7 @@ export default function Container() {
     
     yNotes.current = doc.getMap<Note>('notes');
     yStrokes.current = doc.getArray<Stroke>('strokes');
+    undoManagerRef.current = new Y.UndoManager([yNotes.current, yStrokes.current]);
 
     const updateNotes = () => {
       if (!yNotes.current) return;
@@ -116,6 +121,7 @@ export default function Container() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.code === 'Space' && !e.repeat) {
         setIsSpacePressed(true);
       }
@@ -123,7 +129,7 @@ export default function Container() {
     const handleKeyUp = (e: KeyboardEvent) => {
       if (e.code === 'Space') {
         setIsSpacePressed(false);
-        isDragging.current = false;
+        isPanning.current = false;
       }
     };
 
@@ -152,10 +158,22 @@ export default function Container() {
         deltaY *= 800;
       }
 
-      if (e.ctrlKey || e.metaKey) {
-        const zoomFactor = 0.01;
-        const z = Math.max(0.1, Math.min(5, state.camera.z - deltaY * zoomFactor));
-        state.setCamera({ z });
+      const isZooming = e.ctrlKey || e.metaKey || e.deltaMode !== 0;
+
+      if (isZooming) {
+        const zoomMultiplier = Math.exp(-deltaY * 0.002);
+        const newZ = Math.max(0.1, Math.min(5, state.camera.z * zoomMultiplier));
+        
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        
+        const canvasX = (mouseX - state.camera.x) / state.camera.z;
+        const canvasY = (mouseY - state.camera.y) / state.camera.z;
+        
+        const newX = mouseX - canvasX * newZ;
+        const newY = mouseY - canvasY * newZ;
+
+        state.setCamera({ x: newX, y: newY, z: newZ });
       } else {
         let finalDeltaX = deltaX;
         let finalDeltaY = deltaY;
@@ -179,13 +197,41 @@ export default function Container() {
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (isSpacePressed) {
+    const state = useStore.getState();
+    const tool = state.activeTool;
+    const color = state.activeColor;
+
+    if (isSpacePressed || e.button === 1) {
+      isPanning.current = true;
+      lastPointer.current = { x: e.clientX, y: e.clientY };
+    } else if (tool === 'cursor') {
       isDragging.current = true;
       lastPointer.current = { x: e.clientX, y: e.clientY };
-    } else {
+    } else if (tool === 'sticky' || tool === 'text') {
+      if (!yNotes.current) return;
+      const point = screenToCanvas(e.clientX, e.clientY, state.camera);
+      const id = Date.now().toString();
+      const newNote: Note = {
+        id,
+        x: point.x,
+        y: point.y,
+        text: '',
+        color,
+        size: state.activeSize,
+        isTextOnly: tool === 'text',
+      };
+      yNotes.current.set(id, newNote);
+      
+      if ((window as any).Marple) {
+        (window as any).Marple.track('feature_used', { type: tool, roomId });
+      }
+      useStore.getState().setEditingNoteId(id);
+      useStore.getState().setTool('cursor');
+    } else if (['pen', 'eraser', 'rectangle', 'circle', 'triangle', 'line', 'arrow'].includes(tool)) {
       isDrawing.current = true;
-      const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
-      setCurrentStroke([point]);
+      const point = screenToCanvas(e.clientX, e.clientY, state.camera);
+      const strokeType = (tool === 'pen' || tool === 'eraser') ? 'draw' : tool;
+      setCurrentStroke({ type: strokeType as any, points: [point], color, size: state.activeSize, isEraser: tool === 'eraser' });
     }
   };
 
@@ -195,7 +241,7 @@ export default function Container() {
       roomRef.current.update({ cursor: point });
     }
 
-    if (isDragging.current && isSpacePressed) {
+    if (isPanning.current || (isDragging.current && isSpacePressed)) {
       const dx = e.clientX - lastPointer.current.x;
       const dy = e.clientY - lastPointer.current.y;
 
@@ -212,6 +258,7 @@ export default function Container() {
 
   const handlePointerUp = () => {
     isDragging.current = false;
+    isPanning.current = false;
     if (isDrawing.current) {
       isDrawing.current = false;
       const state = useStore.getState();
@@ -219,28 +266,14 @@ export default function Container() {
         yStrokes.current.push([state.currentStroke]);
         
         if ((window as any).Marple) {
-          (window as any).Marple.track('stroke_drawn', { roomId, points: state.currentStroke.length });
+          (window as any).Marple.track('feature_used', { type: 'drawing', roomId, points: state.currentStroke.length });
         }
       }
       setCurrentStroke(null);
     }
   };
 
-  const handleAddNote = () => {
-    if (!yNotes.current) return;
-    const id = Date.now().toString();
-    const newNote: Note = {
-      id,
-      x: -camera.x / camera.z + window.innerWidth / 2 / camera.z - 100,
-      y: -camera.y / camera.z + window.innerHeight / 2 / camera.z - 100,
-      text: '',
-    };
-    yNotes.current.set(id, newNote);
-    
-    if ((window as any).Marple) {
-      (window as any).Marple.track('note_created', { roomId });
-    }
-  };
+
 
   const handleUpdateNote = (id: string, updates: Partial<Note>) => {
     if (!yNotes.current) return;
@@ -258,7 +291,7 @@ export default function Container() {
         width: '100vw',
         height: '100vh',
         overflow: 'hidden',
-        cursor: isSpacePressed ? (isDragging.current ? 'grabbing' : 'grab') : 'default',
+        cursor: isSpacePressed ? (isPanning.current ? 'grabbing' : 'grab') : 'default',
         backgroundColor: '#f5f5f5',
         touchAction: 'none',
       }}
@@ -306,40 +339,14 @@ export default function Container() {
               </text>
             );
           })}
-          <circle 
-            cx={500} 
-            cy={500} 
-            r={50} 
-            fill="#ff0055" 
-            style={{ pointerEvents: 'auto', cursor: 'pointer' }} 
-          />
         </g>
       </svg>
-      <button
-        onClick={handleAddNote}
-        style={{
-          position: 'absolute',
-          top: 16,
-          left: 16,
-          zIndex: 10,
-          padding: '8px 16px',
-          background: '#1f2937',
-          color: 'white',
-          border: 'none',
-          borderRadius: '4px',
-          cursor: 'pointer',
-        }}
-      >
-        Add Note
-      </button>
-      <div style={{ position: 'absolute', bottom: 0, right: 0 }}>
-        {roomId}
-      </div>
-      {isConnecting && (
-        <div style={{ position: 'absolute', top: 0, right: 0 }}>
-          Connecting...
-        </div>
-      )}
+      <Chrome 
+        isConnecting={isConnecting} 
+        onUndo={() => undoManagerRef.current?.undo()} 
+        onRedo={() => undoManagerRef.current?.redo()} 
+      />
+      <Toolbar />
     </div>
   );
 }
