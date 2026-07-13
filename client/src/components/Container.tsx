@@ -266,7 +266,7 @@ export default function Container() {
         yStrokes.current.push([state.currentStroke]);
         
         if ((window as any).Marple) {
-          (window as any).Marple.track('feature_used', { type: 'drawing', roomId, points: state.currentStroke.length });
+          (window as any).Marple.track('feature_used', { type: 'drawing', roomId, points: state.currentStroke.points.length });
         }
       }
       setCurrentStroke(null);

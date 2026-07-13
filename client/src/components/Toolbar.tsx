@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useStore } from '../store/store';
 import { MousePointer2, Pen, Eraser, StickyNote as StickyNoteIcon, Type } from 'lucide-react';
 

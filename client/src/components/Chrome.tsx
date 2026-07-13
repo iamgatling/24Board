@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/store';
 import { Menu, Share2, Settings, User, ZoomIn, ZoomOut, Radio, Undo2, Redo2, Download, Trash2, Image as ImageIcon, Link, Square, Circle, Triangle, Minus, MoveUpRight } from 'lucide-react';
 import { useParams } from 'react-router-dom';

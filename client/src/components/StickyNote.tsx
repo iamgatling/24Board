@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { useStore, type Note } from '../store/store';
 import { screenToCanvas } from '../utils/utils';
 

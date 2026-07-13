@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@whogoes/client": "^1.0.2",
+    "@whogoes/client": "^1.0.3",
     "lucide-react": "^1.23.0",
     "marple": "^1.0.0",
     "react": "^19.2.7",

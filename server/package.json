@@ -9,12 +9,11 @@
   "dependencies": {
     "@hocuspocus/extension-database": "^4.3.0",
     "@hocuspocus/server": "^4.3.0",
-    "@whogoes/server": "^1.0.1",
+    "@whogoes/server": "^1.0.2",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
     "express": "^5.2.1",
     "express-ws": "^5.0.2",
-    "ioredis-mock": "^8.13.1",
     "marple": "^1.0.0",
     "pg": "^8.22.0",
     "y-websocket": "^1.5.4",
