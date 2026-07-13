@@ -53,6 +53,8 @@ interface BoardState {
   setColor: (color: string) => void;
   setSize: (size: number) => void;
   setEditingNoteId: (id: string | null) => void;
+  boardName: string;
+  setBoardName: (name: string) => void;
 }
 
 export const useStore = create<BoardState>((set) => ({
@@ -65,6 +67,7 @@ export const useStore = create<BoardState>((set) => ({
   activeColor: '#000000',
   activeSize: 4,
   editingNoteId: null,
+  boardName: 'Untitled Board',
   setCamera: (cameraUpdate) =>
     set((state) => {
       const nextCamera = { ...state.camera, ...cameraUpdate };
@@ -107,4 +110,5 @@ export const useStore = create<BoardState>((set) => ({
   setColor: (color) => set({ activeColor: color }),
   setSize: (size) => set({ activeSize: size }),
   setEditingNoteId: (id) => set({ editingNoteId: id }),
+  setBoardName: (boardName) => set({ boardName }),
 }));

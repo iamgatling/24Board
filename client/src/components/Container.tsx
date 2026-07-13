@@ -9,7 +9,7 @@ import { screenToCanvas } from '../utils/utils';
 import { StickyNote } from './StickyNote';
 import { Toolbar } from './Toolbar';
 import { Chrome } from './Chrome';
-
+import { MousePointer2 } from 'lucide-react';
 export default function Container() {
   const { roomId } = useParams();
   const camera = useStore((state) => state.camera);
@@ -19,9 +19,11 @@ export default function Container() {
   const updateCurrentStroke = useStore((state) => state.updateCurrentStroke);
   const notes = useStore((state) => state.notes);
   const setNotes = useStore((state) => state.setNotes);
+  const setBoardName = useStore((state) => state.setBoardName);
 
   const yNotes = useRef<Y.Map<Note> | null>(null);
   const yStrokes = useRef<Y.Array<Stroke> | null>(null);
+  const yMeta = useRef<Y.Map<string> | null>(null);
   const undoManagerRef = useRef<Y.UndoManager | null>(null);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -95,6 +97,7 @@ export default function Container() {
     
     yNotes.current = doc.getMap<Note>('notes');
     yStrokes.current = doc.getArray<Stroke>('strokes');
+    yMeta.current = doc.getMap<string>('meta');
     undoManagerRef.current = new Y.UndoManager([yNotes.current, yStrokes.current]);
 
     const updateNotes = () => {
@@ -107,11 +110,21 @@ export default function Container() {
       setStrokes(yStrokes.current.toArray());
     };
 
+    const updateMeta = () => {
+      if (!yMeta.current) return;
+      const name = yMeta.current.get('boardName');
+      if (name !== undefined) {
+        setBoardName(name);
+      }
+    };
+
     yNotes.current.observe(updateNotes);
     yStrokes.current.observe(updateStrokes);
+    yMeta.current.observe(updateMeta);
 
     updateNotes();
     updateStrokes();
+    updateMeta();
     
     return () => {
       provider.destroy();
@@ -236,7 +249,8 @@ export default function Container() {
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    const point = screenToCanvas(e.clientX, e.clientY, useStore.getState().camera);
+    const currentCamera = useStore.getState().camera;
+    const point = screenToCanvas(e.clientX, e.clientY, currentCamera);
     if (roomRef.current) {
       roomRef.current.update({ cursor: point });
     }
@@ -246,8 +260,8 @@ export default function Container() {
       const dy = e.clientY - lastPointer.current.y;
 
       setCamera({
-        x: camera.x + dx,
-        y: camera.y + dy,
+        x: currentCamera.x + dx,
+        y: currentCamera.y + dy,
       });
 
       lastPointer.current = { x: e.clientX, y: e.clientY };
@@ -289,6 +303,12 @@ export default function Container() {
     const note = yNotes.current.get(id);
     if (note) {
       yNotes.current.set(id, { ...note, ...updates });
+    }
+  };
+
+  const handleUpdateBoardName = (name: string) => {
+    if (yMeta.current) {
+      yMeta.current.set('boardName', name);
     }
   };
 
@@ -337,15 +357,16 @@ export default function Container() {
           {Object.values(remoteSessions).map(session => {
             if (!session.cursor) return null;
             return (
-              <text
+              <g
                 key={session.sessionId}
-                x={session.cursor.x}
-                y={session.cursor.y}
-                fill={session.user?.color || 'red'}
-                fontSize="40"
+                transform={`translate(${session.cursor.x}, ${session.cursor.y})`}
               >
-                V
-              </text>
+                <MousePointer2
+                  color={session.user?.color || 'red'}
+                  fill={session.user?.color || 'red'}
+                  size={24}
+                />
+              </g>
             );
           })}
         </g>
@@ -355,6 +376,7 @@ export default function Container() {
         onUndo={() => undoManagerRef.current?.undo()} 
         onRedo={() => undoManagerRef.current?.redo()} 
         onClearCanvas={handleClearCanvas}
+        onUpdateBoardName={handleUpdateBoardName}
       />
       <Toolbar />
     </div>

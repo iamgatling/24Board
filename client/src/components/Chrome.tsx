@@ -4,13 +4,16 @@ import { Menu, Share2, Settings, User, ZoomIn, ZoomOut, Radio, Undo2, Redo2, Dow
 import { useParams } from 'react-router-dom';
 import { exportAsPNG, exportAsSVG } from '../utils/export';
 
-export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas }: { isConnecting: boolean, onUndo?: () => void, onRedo?: () => void, onClearCanvas?: () => void }) {
+export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas, onUpdateBoardName }: { isConnecting: boolean, onUndo?: () => void, onRedo?: () => void, onClearCanvas?: () => void, onUpdateBoardName?: (name: string) => void }) {
   const { roomId } = useParams();
+  const boardName = useStore(state => state.boardName);
   const camera = useStore(state => state.camera);
   const setCamera = useStore(state => state.setCamera);
   const setTool = useStore(state => state.setTool);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState(boardName);
   const menuRef = useRef<HTMLDivElement>(null);
   const shareMenuRef = useRef<HTMLDivElement>(null);
 
@@ -29,6 +32,10 @@ export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas }: { isConn
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isMenuOpen, isShareMenuOpen]);
 
+  useEffect(() => {
+    setTempName(boardName);
+  }, [boardName]);
+
   const handleZoom = (newZ: number) => {
     const cx = window.innerWidth / 2;
     const cy = window.innerHeight / 2;
@@ -45,6 +52,22 @@ export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas }: { isConn
   const zoomIn = () => handleZoom(Math.min(5, camera.z * 1.2));
   const zoomOut = () => handleZoom(Math.max(0.1, camera.z / 1.2));
   const zoomReset = () => handleZoom(1);
+
+  const handleNameSubmit = () => {
+    setIsEditingName(false);
+    if (tempName.trim() !== boardName) {
+      onUpdateBoardName?.(tempName.trim() || 'Untitled Board');
+    }
+  };
+
+  const handleNameKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleNameSubmit();
+    } else if (e.key === 'Escape') {
+      setIsEditingName(false);
+      setTempName(boardName);
+    }
+  };
 
   return (
     <>
@@ -123,7 +146,33 @@ export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas }: { isConn
           )}
         </div>
         <div style={{ width: 1, height: 20, background: '#e5e7eb' }} />
-        <span style={{ fontWeight: 600, fontSize: 14, color: '#111827' }}>Untitled Board</span>
+        {isEditingName ? (
+          <input
+            autoFocus
+            value={tempName}
+            onChange={(e) => setTempName(e.target.value)}
+            onBlur={handleNameSubmit}
+            onKeyDown={handleNameKeyDown}
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              color: '#111827',
+              border: '1px solid #3b82f6',
+              borderRadius: 4,
+              padding: '2px 6px',
+              outline: 'none',
+              width: 150,
+              background: '#fff'
+            }}
+          />
+        ) : (
+          <span 
+            onDoubleClick={() => setIsEditingName(true)}
+            style={{ fontWeight: 600, fontSize: 14, color: '#111827', cursor: 'text', padding: '3px 7px' }}
+          >
+            {boardName}
+          </span>
+        )}
         <div style={{ 
           display: 'flex', 
           alignItems: 'center', 
