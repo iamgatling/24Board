@@ -50,7 +50,6 @@ export default function Container() {
     roomRef.current = room;
     
     const handleSnapshot = (sessions: SessionPayload[]) => {
-      setIsConnecting(false);
       const newSessions: Record<string, SessionPayload> = {};
       sessions.forEach(s => {
         newSessions[s.sessionId] = s;
@@ -95,6 +94,11 @@ export default function Container() {
     const doc = new Y.Doc();
     const provider = new WebsocketProvider('ws://localhost:3000', roomId, doc);
     
+    const handleStatus = ({ status }: { status: 'connected' | 'disconnected' }) => {
+      setIsConnecting(status !== 'connected');
+    };
+    provider.on('status', handleStatus);
+    
     yNotes.current = doc.getMap<Note>('notes');
     yStrokes.current = doc.getArray<Stroke>('strokes');
     yMeta.current = doc.getMap<string>('meta');
@@ -127,6 +131,7 @@ export default function Container() {
     updateMeta();
     
     return () => {
+      provider.off('status', handleStatus);
       provider.destroy();
       doc.destroy();
     };
