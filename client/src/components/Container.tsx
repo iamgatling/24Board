@@ -275,6 +275,15 @@ export default function Container() {
 
 
 
+  const handleClearCanvas = () => {
+    if (yStrokes.current) {
+      yStrokes.current.delete(0, yStrokes.current.length);
+    }
+    if (yNotes.current) {
+      yNotes.current.clear();
+    }
+  };
+
   const handleUpdateNote = (id: string, updates: Partial<Note>) => {
     if (!yNotes.current) return;
     const note = yNotes.current.get(id);
@@ -345,6 +354,7 @@ export default function Container() {
         isConnecting={isConnecting} 
         onUndo={() => undoManagerRef.current?.undo()} 
         onRedo={() => undoManagerRef.current?.redo()} 
+        onClearCanvas={handleClearCanvas}
       />
       <Toolbar />
     </div>

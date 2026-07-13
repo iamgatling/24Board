@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useStore } from '../store/store';
 import { Menu, Share2, Settings, User, ZoomIn, ZoomOut, Radio, Undo2, Redo2, Download, Trash2, Image as ImageIcon, Link, Square, Circle, Triangle, Minus, MoveUpRight } from 'lucide-react';
 import { useParams } from 'react-router-dom';
+import { exportAsPNG, exportAsSVG } from '../utils/export';
 
-export function Chrome({ isConnecting, onUndo, onRedo }: { isConnecting: boolean, onUndo?: () => void, onRedo?: () => void }) {
+export function Chrome({ isConnecting, onUndo, onRedo, onClearCanvas }: { isConnecting: boolean, onUndo?: () => void, onRedo?: () => void, onClearCanvas?: () => void }) {
   const { roomId } = useParams();
   const camera = useStore(state => state.camera);
   const setCamera = useStore(state => state.setCamera);
@@ -110,7 +111,12 @@ export function Chrome({ isConnecting, onUndo, onRedo }: { isConnecting: boolean
                 <MoveUpRight size={16} /> Arrow
               </button>
               <div style={{ height: 1, background: '#e5e7eb', margin: '4px 0' }} />
-              <button className="chrome-btn" onPointerDown={() => { setIsMenuOpen(false); }} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
+              <button className="chrome-btn" onPointerDown={() => { 
+                setIsMenuOpen(false); 
+                useStore.getState().setStrokes([]);
+                useStore.getState().setNotes([]);
+                onClearCanvas?.(); 
+              }} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#ef4444', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
                 <Trash2 size={16} /> Clear Canvas
               </button>
             </div>
@@ -184,14 +190,26 @@ export function Chrome({ isConnecting, onUndo, onRedo }: { isConnecting: boolean
                 padding: 6,
                 zIndex: 100,
               }}>
-                <button className="chrome-btn" onPointerDown={() => setIsShareMenuOpen(false)} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
+                <button className="chrome-btn" onPointerDown={() => {
+                  setIsShareMenuOpen(false);
+                  navigator.clipboard.writeText(window.location.href);
+                }} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
                   <Link size={16} /> Copy Room Link
                 </button>
                 <div style={{ height: 1, background: '#e5e7eb', margin: '4px 0' }} />
-                <button className="chrome-btn" onPointerDown={() => setIsShareMenuOpen(false)} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
+                <button className="chrome-btn" onPointerDown={() => {
+                  setIsShareMenuOpen(false);
+                  const canvas = document.querySelector('canvas');
+                  const state = useStore.getState();
+                  exportAsPNG(canvas, state.notes, state.camera);
+                }} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
                   <ImageIcon size={16} /> Export as PNG
                 </button>
-                <button className="chrome-btn" onPointerDown={() => setIsShareMenuOpen(false)} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
+                <button className="chrome-btn" onPointerDown={() => {
+                  setIsShareMenuOpen(false);
+                  const state = useStore.getState();
+                  exportAsSVG(state.strokes, state.notes, state.camera, window.innerWidth, window.innerHeight);
+                }} style={{ textAlign: 'left', padding: '10px 12px', background: 'transparent', border: 'none', cursor: 'pointer', color: '#4b5563', borderRadius: 6, fontSize: 14, display: 'flex', alignItems: 'center', gap: 10, fontWeight: 500 }}>
                   <Download size={16} /> Export as SVG
                 </button>
               </div>
