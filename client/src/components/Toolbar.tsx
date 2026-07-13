@@ -20,10 +20,12 @@ export function Toolbar() {
   const penSizes = [2, 4, 8, 16];
   const currentSizes = activeTool === 'sticky' ? stickySizes : (activeTool === 'text' ? textSizes : penSizes);
   
-  const useDotsForSizing = activeTool === 'pen' || activeTool === 'eraser';
+  const isShapeTool = ['rectangle', 'circle', 'triangle', 'line', 'arrow'].includes(activeTool);
   
-  const showColorPicker = activeTool === 'pen' || activeTool === 'sticky' || activeTool === 'text';
-  const showSizePicker = activeTool === 'pen' || activeTool === 'eraser' || activeTool === 'text' || activeTool === 'sticky';
+  const useDotsForSizing = activeTool === 'pen' || activeTool === 'eraser' || isShapeTool;
+  
+  const showColorPicker = activeTool === 'pen' || activeTool === 'sticky' || activeTool === 'text' || isShapeTool;
+  const showSizePicker = activeTool === 'pen' || activeTool === 'eraser' || activeTool === 'text' || activeTool === 'sticky' || isShapeTool;
   const showContextBar = showColorPicker || showSizePicker;
 
   const tools = [
